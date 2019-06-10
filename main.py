@@ -20,8 +20,7 @@ class Mapping:
         self.map_save_path = None
         self.geolocator = Nominatim(user_agent="poor_memory")
         self.unsaved_changes = False
-        self.data = []
-        self.person_sample = {
+        self.data = pd.DataFrame({
             'name': [],  # type(str)
             'lat': [],  # type(float)
             'lon': [],  # type(float)
@@ -31,12 +30,12 @@ class Mapping:
             'dates visited': [],  # type(list)
             'date added': [],  # type(float)
             'description': []  # type(str)
-            }
+            })
         self.column_order = self.person_sample.keys()
 
     #TODO
     @self.reset_save_flag
-    def add_point(self, address, lat, lon, text):
+    def add_point(self, address):
         # look into vincent and altair for displaying people data whene marker is clicked
         # https://github.com/wrobstory/vincent
         # https://altair-viz.github.io/
@@ -50,17 +49,24 @@ class Mapping:
 
     #TODO: how to fil, in/
     @self.reset_save_flag
-    def add_person(self, address, lat, lon, person):
+    def add_person(self, info):
         # look into vincent and altair for displaying people data whene marker is clicked
         # https://github.com/wrobstory/vincent
         # https://altair-viz.github.io/
         # for more info on popups
         # https://nbviewer.jupyter.org/github/python-visualization/folium/blob/master/examples/Popups.ipynb
-        if person.name in self.people.keys():
-            print(f"{person.name} already exists.")
+        if info['name'] in self.people.keys():
+            print(f"{person.name} already exists. No new entry will be added")
             return
-        if address:
-            lat, lon = address_to_lat_lon(address)
+        elif not info['name']:
+            print("No name found. Entering a name is required to add entry.")
+            return
+
+        if info['city'] and not (info['lat'] or info['lon']):
+            info['lat'], info['lon'] = address_to_lat_lon(address)
+        elif not info['city'] and info['lat'] and info['lon']:
+            info['city'] = self.lat_lon_to_city(lat=info['lat'], lon=info['lon'])
+        self.data.append(info)
 
     def add_person_from_widget(self):
         dialog = Ui_AddPersonWidget()
@@ -158,7 +164,7 @@ class Mapping:
 
     @staticmethod
     def lat_lon_to_city(lat, lon):
-        city = self.geolocator.reverse((lat, lon), language='en').raw['address']['city']
+        return self.geolocator.reverse((lat, lon), language='en').raw['address']['city']
 
 
 class Ui_AddPersonWidget(QtGui.QDialog):
