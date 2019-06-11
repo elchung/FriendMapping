@@ -3,15 +3,15 @@ import folium  # make pretty maps
 from PyQt5 import QtGui, QtWidgets  # look at pretty maps
 from geopy.distance import vincenty
 from geopy.geocoders import Nominatim  # address to lat lon for pretty maps
-from IPython.display import display
-import xlrd
+# from IPython.display import display
+import xlwt
 import pandas as pd
-
+import time
 # https://blog.dominodatalab.com/creating-interactive-crime-maps-with-folium/
 
 
 class Mapping:
-    def __init__(self, home_coord, zoom=12):
+    def __init__(self, home_coord=(0, 0), zoom=12):
         '''
         input: tuple of starting coordinates
         '''
@@ -34,7 +34,9 @@ class Mapping:
             'date added': [],  # type(float)
             'description': []  # type(str)
             })
-        self.column_order = self.person_sample.keys()
+        self.last_geo_call_time = time.time()
+        self.nominatim_seconds_per_request = 1.1
+        # self.column_order = self.person_sample.keys()
 
     #TODO
     # @self.reset_save_flag
@@ -51,25 +53,26 @@ class Mapping:
     #     point.add_to(self.m)
 
     #TODO: how to fil, in/
-    @self.reset_save_flag
     def add_person(self, info):
         # look into vincent and altair for displaying people data whene marker is clicked
         # https://github.com/wrobstory/vincent
         # https://altair-viz.github.io/
         # for more info on popups
         # https://nbviewer.jupyter.org/github/python-visualization/folium/blob/master/examples/Popups.ipynb
-        if info['name'] in self.people.keys():
-            print(f"{person.name} already exists. No new entry will be added")
+        self.unsaved_changes = True
+        if info['name'] in self.data['name']:
+            print(f"{info['name']} already exists. No new entry will be added")
             return
         elif not info['name']:
             print("No name found. Entering a name is required to add entry.")
             return
 
-        if info['city'] and not (info['lat'] or info['lon']):
-            info['lat'], info['lon'] = address_to_lat_lon(address)
-        elif not info['city'] and info['lat'] and info['lon']:
+        if info['city'] and ('lat' not in info.keys() or 'lon' not in info.keys()):
+            info['lat'], info['lon'] = self.address_to_lat_lon(info['city'])
+        elif 'city' not in info.keys and info['lat'] and info['lon']:
             info['city'] = self.lat_lon_to_city(lat=info['lat'], lon=info['lon'])
-        self.data.append(info)
+        info['date added'] = time.time()
+        self.data = self.data.append(info, ignore_index=True)
 
     def add_person_from_widget(self):
         dialog = Ui_AddPersonWidget()
@@ -77,13 +80,13 @@ class Mapping:
             # when done, save information locally
             info = dialog.info
 
-    @self.reset_save_flag
     def merge_data_with_import(self):
+        self.unsaved_changes = True
         # if importing data and data already in current list, merge
 
-    @self.reset_save_flag
     def remove_person(self, name):
         # scan through points dictionary for person or scan through excel file for person???????
+        self.unsaved_changes = True
         if name not in self.data['name']:
             print(f"{name} not found.")
             return
@@ -111,7 +114,7 @@ class Mapping:
     def make_html_popup_text(self, info):
         '''
         input: info = dictionary of all data to display
-        out: html string 
+        out: html string
         '''
         popup_text = f"<b></b>{info['name']}\n"
         for key in info.keys():
@@ -121,12 +124,12 @@ class Mapping:
 
     def export_to_excel(self, new_save=False):
         if new_save or not self.save_location:
-            self.save_location = self.get_save_as("Excel File (*.xlsx, *.xls)")
+            self.save_location = self.get_save_as("Excel File (*.xls)")
         self.data.to_excel(self.save_location)  # TODO change this from pandadata to dicitonary import
         self.unsaved_changes = False
 
     def import_from_excel(self):
-        if self.data['name'] and self.unsaved_changes:  # TODO: Add flag for unsaved
+        if not self.data['name'].empty() and self.unsaved_changes:
             new = QtWidgets.QMessageBox()
             reply = QtWidgets.QMessageBox.question(new, "Unsaved data found",
                                                    "Unsaved data found, would you like to merge with imported file?",
@@ -135,7 +138,7 @@ class Mapping:
             if reply == QtWidgets.QMessageBox.Cancel:
                 return
 
-            self.save_location = self.get_save_as("Excel File (*.xlsx, *.xls)")
+            import_file_path = self.get_save_as("Excel File (*.xlsx, *.xls)")
             if reply == QtWidgets.QMessageBox.Yes:
                 import_data = pd.read_excel(import_file_path)
                 import_names = import_data['name'].tolist()
@@ -154,8 +157,20 @@ class Mapping:
             elif reply == QtWidgets.QMessageBox.No:
                 self.data = pd.read_excel(import_file_path)
 
-    def reset_save_flag(self):
-        self.unsaved_changes = True
+    def address_to_lat_lon(self, address):
+        self.wait_geo_timeout()
+        location = self.geolocator.geocode(address)
+        return location.latitude, location.longitude
+
+    def lat_lon_to_city(self, lat, lon):
+        self.wait_geo_timeout()
+        return self.geolocator.reverse((lat, lon), language='en').raw['address']['city']
+
+    def wait_geo_timeout(self):  # abiding by https://operations.osmfoundation.org/policies/nominatim/
+        if time.time() - self.last_geo_call_time < self.nominatim_seconds_per_request:
+                print("Less than one second since geo call was placed. Waiting for 1 second to pass....")
+                while time.time() - self.last_geo_call_time < self.nominatim_seconds_per_request:
+                    pass
 
     @staticmethod
     def query_import_data_question(question):
@@ -176,17 +191,8 @@ class Mapping:
         filedialog = QtWidgets.QFileDialog()
         return QtWidgets.QFileDialog.getSaveFileName(filedialog, 'Save As', '', filetype)[0]
 
-    @staticmethod
-    def address_to_lat_lon(address):
-        location = self.geolocator.geocode(address)
-        return location.latitude, location.longitude
 
-    @staticmethod
-    def lat_lon_to_city(lat, lon):
-        return self.geolocator.reverse((lat, lon), language='en').raw['address']['city']
-
-
-class Ui_AddPersonWidget(QtGui.QDialog):
+class Ui_AddPersonWidget(QtWidgets.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
@@ -205,15 +211,12 @@ class Ui_AddPersonWidget(QtGui.QDialog):
         '''
 
     def setupUi(self, ShowGroupWidget):
+        pass
         #sets up submit button
 
     def submitclose(self):
         #TODO: save input data to self.info first
         self.info = {
-
-
-
-
         }
         self.accept()
 
@@ -311,8 +314,7 @@ class Ui_AddPersonWidget(QtGui.QDialog):
 
 
 def main():
-    mapper = Mapping(address_to_lat_lon('412 broadway Seattle WA'))
-    mapper.save()
+    pass
 
 '''
 long term additions:
