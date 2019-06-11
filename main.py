@@ -12,6 +12,9 @@ import pandas as pd
 
 class Mapping:
     def __init__(self, home_coord, zoom=12):
+        '''
+        input: tuple of starting coordinates
+        '''
         self.app = QtWidgets.QApplication(sys.argv)
         self.start_lat = home_coord[0]
         self.start_lon = home_coord[1]
@@ -34,18 +37,18 @@ class Mapping:
         self.column_order = self.person_sample.keys()
 
     #TODO
-    @self.reset_save_flag
-    def add_point(self, address):
-        # look into vincent and altair for displaying people data whene marker is clicked
-        # https://github.com/wrobstory/vincent
-        # https://altair-viz.github.io/
-        # for more info on popups
-        # https://nbviewer.jupyter.org/github/python-visualization/folium/blob/master/examples/Popups.ipynb
-        if address:
-            lat, lon = self.address_to_lat_lon(address)
-        point = folium.Marker([lat, lon], popup=text)
-        self.points.append(point)
-        point.add_to(self.m)
+    # @self.reset_save_flag
+    # def add_point(self, address):
+    #     # look into vincent and altair for displaying people data whene marker is clicked
+    #     # https://github.com/wrobstory/vincent
+    #     # https://altair-viz.github.io/
+    #     # for more info on popups
+    #     # https://nbviewer.jupyter.org/github/python-visualization/folium/blob/master/examples/Popups.ipynb
+    #     if address:
+    #         lat, lon = self.address_to_lat_lon(address)
+    #     point = folium.Marker([lat, lon], popup=text)
+    #     self.points.append(point)
+    #     point.add_to(self.m)
 
     #TODO: how to fil, in/
     @self.reset_save_flag
@@ -99,6 +102,22 @@ class Mapping:
         if not self.map_save_path:
             self.set_map_save_path()
         self.m.save(self.map_save_path)
+
+    def set_data_to_map(self):
+        for person_dict in self.data.to_dict('records'):  # see https://pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.to_dict.html#pandas.DataFrame.to_dict
+            text = self.make_html_popup_text(person_dict)
+            folium.Marker([person_dict['lat'], person_dict['lon']], popup=text, tooltip=person_dict['name']).add_to(self.m)
+
+    def make_html_popup_text(self, info):
+        '''
+        input: info = dictionary of all data to display
+        out: html string 
+        '''
+        popup_text = f"<b></b>{info['name']}\n"
+        for key in info.keys():
+            if key != 'name':
+                popup_text += f"<b>{key}:</b> {info[key]}\n"
+        return popup_text
 
     def export_to_excel(self, new_save=False):
         if new_save or not self.save_location:
