@@ -7,19 +7,18 @@ from geopy.geocoders import Nominatim  # address to lat lon for pretty maps
 import xlwt
 import pandas as pd
 import time
+import os
 # https://blog.dominodatalab.com/creating-interactive-crime-maps-with-folium/
 
 
 class Mapping:
     def __init__(self, home_coord=(0, 0), zoom=12):
-        '''
-        input: tuple of starting coordinates
-        '''
+        # input: tuple of starting coordinates
         self.app = QtWidgets.QApplication(sys.argv)
         self.start_lat = home_coord[0]
         self.start_lon = home_coord[1]
         self.m = folium.Map(location=home_coord, zoom_start=zoom)
-        self.save_location = None  # TODO Rename to self.data_save_path
+        self.save_location = os.path.dirname(os.path.abspath(__file__))  # TODO Rename to self.data_save_path
         self.map_save_path = None
         self.geolocator = Nominatim(user_agent="poor_memory")
         self.unsaved_changes = False
@@ -38,27 +37,11 @@ class Mapping:
         self.nominatim_seconds_per_request = 1.1
         # self.column_order = self.person_sample.keys()
 
-    #TODO
-    # @self.reset_save_flag
-    # def add_point(self, address):
-    #     # look into vincent and altair for displaying people data whene marker is clicked
-    #     # https://github.com/wrobstory/vincent
-    #     # https://altair-viz.github.io/
-    #     # for more info on popups
-    #     # https://nbviewer.jupyter.org/github/python-visualization/folium/blob/master/examples/Popups.ipynb
-    #     if address:
-    #         lat, lon = self.address_to_lat_lon(address)
-    #     point = folium.Marker([lat, lon], popup=text)
-    #     self.points.append(point)
-    #     point.add_to(self.m)
-
     #TODO: how to fil, in/
     def add_person(self, info):
         # look into vincent and altair for displaying people data whene marker is clicked
         # https://github.com/wrobstory/vincent
         # https://altair-viz.github.io/
-        # for more info on popups
-        # https://nbviewer.jupyter.org/github/python-visualization/folium/blob/master/examples/Popups.ipynb
         self.unsaved_changes = True
         if info['name'] in self.data['name']:
             print(f"{info['name']} already exists. No new entry will be added")
@@ -68,7 +51,7 @@ class Mapping:
             return
 
         if info['city'] and ('lat' not in info.keys() or 'lon' not in info.keys()):
-            info['lat'], info['lon'] = self.address_to_lat_lon(info['city'])
+            info['lat'], info['lon'] = self.city_to_lat_lon(info['city'])
         elif 'city' not in info.keys and info['lat'] and info['lon']:
             info['city'] = self.lat_lon_to_city(lat=info['lat'], lon=info['lon'])
         info['date added'] = time.time()
@@ -80,11 +63,7 @@ class Mapping:
             # when done, save information locally
             info = dialog.info
 
-    def merge_data_with_import(self):
-        self.unsaved_changes = True
-        # if importing data and data already in current list, merge
-
-    def remove_person(self, name):
+    def delete_person(self, name):
         # scan through points dictionary for person or scan through excel file for person???????
         self.unsaved_changes = True
         if name not in self.data['name']:
@@ -156,21 +135,29 @@ class Mapping:
                 # TODO: also need to check column order
             elif reply == QtWidgets.QMessageBox.No:
                 self.data = pd.read_excel(import_file_path)
+            self.unsaved_changes = True 
 
-    def address_to_lat_lon(self, address):
-        self.wait_geo_timeout()
+    def city_to_lat_lon(self, address):
+        self._wait_geo_timeout()
         location = self.geolocator.geocode(address)
         return location.latitude, location.longitude
 
     def lat_lon_to_city(self, lat, lon):
-        self.wait_geo_timeout()
+        self._wait_geo_timeout()
         return self.geolocator.reverse((lat, lon), language='en').raw['address']['city']
 
-    def wait_geo_timeout(self):  # abiding by https://operations.osmfoundation.org/policies/nominatim/
+    def _wait_geo_timeout(self):
+        self._check_geo_timeout()
+        self._update_geo_timeout()
+
+    def _check_geo_timeout(self):  # abiding by https://operations.osmfoundation.org/policies/nominatim/
         if time.time() - self.last_geo_call_time < self.nominatim_seconds_per_request:
                 print("Less than one second since geo call was placed. Waiting for 1 second to pass....")
                 while time.time() - self.last_geo_call_time < self.nominatim_seconds_per_request:
                     pass
+
+    def _update_geo_timeout(self):
+        self.last_geo_call_time = time.time()
 
     @staticmethod
     def query_import_data_question(question):
@@ -193,7 +180,7 @@ class Mapping:
 
 
 class Ui_AddPersonWidget(QtWidgets.QDialog):
-    def __init__(self):
+    def __init__(self, parameters):
         QtGui.QDialog.__init__(self)
         self.setupUi(self)
         self.info = {}
@@ -228,7 +215,7 @@ class Ui_AddPersonWidget(QtWidgets.QDialog):
 #         if not address:
 #             print("Error, address required!?")
 
-#         coordinates = address_to_lat_lon(address)
+#         coordinates = city_to_lat_lon(address)
 
 #         self._address = address
 #         self._name = name
