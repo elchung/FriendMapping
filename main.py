@@ -8,6 +8,9 @@ import friend_map_ui
 import popup_widgets
 from PandasModel import PandasModel
 # https://blog.dominodatalab.com/creating-interactive-crime-maps-with-folium/
+#look into qcompleter for city autocomplete
+#look into importing from contacts list on phone, then saving to phone
+
 
 class VCFParser:
     def __init__(self):
