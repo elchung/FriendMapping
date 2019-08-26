@@ -1,6 +1,7 @@
 from PyQt5 import QtCore
 import pandas as pd
 
+
 class PandasModel(QtCore.QAbstractTableModel):
     DtypeRole = QtCore.Qt.UserRole + 1000
     ValueRole = QtCore.Qt.UserRole + 1001
@@ -8,6 +9,7 @@ class PandasModel(QtCore.QAbstractTableModel):
     def __init__(self, df=pd.DataFrame(), parent=None):
         super(PandasModel, self).__init__(parent)
         self._dataframe = df
+        self.data_changed = QtCore.pyqtSignal(QtCore.QModelIndex, QtCore.QModelIndex)
 
     def setDataFrame(self, dataframe):
         self.beginResetModel()
@@ -54,6 +56,17 @@ class PandasModel(QtCore.QAbstractTableModel):
         if role == PandasModel.DtypeRole:
             return dt
         return QtCore.QVariant()
+
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+    @QtCore.pyqtSlot()
+    def setData(self, index, any, role=QtCore.Qt.EditRole):
+        print(f"Updating row {index.row()} col {index.column()} to {any}")
+        self._dataframe.iat[index.row(), index.column()] = any
+        return True
+
+
 
     def roleNames(self):
         roles = {

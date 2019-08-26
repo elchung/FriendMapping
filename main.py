@@ -19,7 +19,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.setupUi(window)
         # input: tuple of starting coordinates
         self.app = QtWidgets.QApplication(sys.argv)
-        self.setup_connections()
+
         self.start_lat = home_coord[0]
         self.start_lon = home_coord[1]
         self.geo_locator = Geo()
@@ -29,20 +29,24 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.map_save_path = None
         self.unsaved_changes = False
         self.data = pd.DataFrame({
-            'Name': [],  # type(str)
-            'Lat': [],  # type(float)
-            'Lon': [],  # type(float)
-            'Address': [],  # type(str)
-            'Tags': [],  # type(list)
-            'Last visited': [],  # type(float)
-            'Dates visited': [],  # type(list)
-            'Date added': [],  # type(float)
-            'Description': []  # type(str)
+            'Name': ['a'],  # type(str)
+            'Lat': ['a'],  # type(float)
+            'Lon': ['a'],  # type(float)
+            'Address': ['0'],  # type(str)
+            'Tags': ['0'],  # type(list)
+            'Last visited': ['0'],  # type(float)
+            'Dates visited': ['0'],  # type(list)
+            'Date added': ['0'],  # type(float)
+            'Description': ['0']  # type(str)
             })
-        self.tableWidget_data.setColumnCount(len(self.data.keys()))
+
+        pandas_table_model = PandasModel(self.data)
+        self.tableView_data.setModel(pandas_table_model)
+        # self.tableView_data.setColumnCount(len(self.data.keys()))
         # self.data_model = PandasModel(self.data)
-        # self.tableWidget_data.setModel(self.data_model)
+        # self.tableView_data.setModel(self.data_model)
         # self.column_order = self.person_sample.keys()
+        self.setup_connections()
 
     def setup_connections(self):
         self.pushButton_add_person.clicked.connect(self.add_person)
@@ -55,7 +59,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.pushButton_set_home.clicked.connect(self.set_home)
         self.pushButton_show_map.clicked.connect(self.display_map)
         self.pushButton_return_to_main.clicked.connect(self._return_to_main)
-        self.tableWidget_data.currentCellChanged.connect(self._update_dataframe_from_table)  # variable to track last entered cell, so when it's left to save to dataframe
+        # self.tableView_data.dataChanged.connect(self._update_dataframe_from_table)  # variable to track last entered cell, so when it's left to save to dataframe
 
 
     def add_person(self):
@@ -189,12 +193,17 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.start_lon = info['Lon']
 
     def update_table_view(self, info_dict):
-        row_position = self.tableWidget_data.rowCount()
-        self.tableWidget_data.insertRow(row_position)
-        self.tableWidget_data.setRowCount(self.tableWidget_data.rowCount())
-        self.tableWidget_data.setColumnCount(self.tableWidget_data.columnCount())
+        # called when add person is fininshed
+        row_position = self.tableView_data.rowCount()
+        self.tableView_data.insertRow(row_position)
+        self.tableView_data.setRowCount(self.tableView_data.rowCount())
+        self.tableView_data.setColumnCount(self.tableView_data.columnCount())
         # for i in
-        # self.tableWidget_data.insert
+        # self.tableView_data.insert
+
+    def _update_dataframe_from_table(self):
+        # gets called when data is manually entered in tableview. will update dataframe with new data
+        pass
 
     def update_dataframe_from_table(self, prev_row, prev_col, new_row, new_col):
         # update dataframe with new data
