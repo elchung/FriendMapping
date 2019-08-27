@@ -31,7 +31,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.save_location = None
         self.map_save_path = None
         self.unsaved_changes = False
-        self.data = pd.DataFrame({
+        self.data = pd.DataFrame({  # will only be used for passthrough to model
             'Name': ['a'],  # type(str)
             'Lat': ['a'],  # type(float)
             'Lon': ['a'],  # type(float)
@@ -94,7 +94,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.tableView_data.update()
         # self.update_table_view(info)
         # for i in info.keys():  # might be this instead
-        #     self.data[i].append(info[i])
+        #     self.setData[i].append(info[i])
         print(self.data)
 
     def add_table_row(self):

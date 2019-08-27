@@ -36,7 +36,7 @@ class PandasModel(QtCore.QAbstractTableModel):
     def rowCount(self, parent=QtCore.QModelIndex()):
         if parent.isValid():
             return 0
-        return len(self._dataframe.index)
+        return len(self._dataframe.index)  # not using shape due to len(index) having better performance
 
     def columnCount(self, parent=QtCore.QModelIndex()):
         if parent.isValid():
@@ -63,21 +63,18 @@ class PandasModel(QtCore.QAbstractTableModel):
     def flags(self, index):
         return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
-    #TODO
-    def keyPressEvent(self, event):
-        print("event called")
-        if event.key() in self.next_row_keys:
-            self._dataframe.append(pd.Series(), ignore_index=True)
-
     def setData(self, index, any, role=QtCore.Qt.EditRole):
         if not index.isValid() or role != QtCore.Qt.EditRole:
             return False
         self._dataframe.iat[index.row(), index.column()] = any
         if index.row()+1 == self.rowCount():
             print("Trying to insert row")
-            # self.beginInsertRows(QtCore.QModelIndex(), self.rowCount()-1, self.rowCount())
-            self.insertRow(self.rowCount())
-            # self.endInsertRows()
+            self.layoutAboutToBeChanged.emit()
+            self.beginInsertRows(index, 1, 1)
+            self._dataframe = self._dataframe.append(pd.Series(), ignore_index=True).copy(deep=False)
+            print(self._dataframe)
+            self.endInsertRows()
+            self.layoutChanged.emit()
         self.dataChanged.emit(index,  index)
         self.layoutChanged.emit()
         # self._dataframe.reset_index(inplace=True, drop=True)
