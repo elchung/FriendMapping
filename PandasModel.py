@@ -8,13 +8,16 @@ class PandasModel(QtCore.QAbstractTableModel):
 
     def __init__(self, df=pd.DataFrame(), parent=None):
         super(PandasModel, self).__init__(parent)
-        self._dataframe = df
-        self.data_changed = QtCore.pyqtSignal(QtCore.QModelIndex, QtCore.QModelIndex)
+        self._dataframe = df.copy(deep=False)
+        # self.data_changed = QtCore.pyqtSignal(QtCore.QModelIndex, QtCore.QModelIndex)
+        self.next_row_keys = [QtCore.Qt.Key_Down, QtCore.Qt.Key_Return]
+
 
     def setDataFrame(self, dataframe):
         self.beginResetModel()
-        self._dataframe = dataframe.copy()
+        self._dataframe = dataframe.copy(deep=False)
         self.endResetModel()
+        self.layoutchanged.emit()
 
     def dataFrame(self):
         return self._dataframe
@@ -40,9 +43,9 @@ class PandasModel(QtCore.QAbstractTableModel):
             return 0
         return self._dataframe.columns.size
 
+
     def data(self, index, role=QtCore.Qt.DisplayRole):
-        if not index.isValid() or \
-                not (0 <= index.row() < self.rowCount() and 0 <= index.column() < self.columnCount()):
+        if not index.isValid() or not (0 <= index.row() < self.rowCount() and 0 <= index.column() < self.columnCount()):
             return QtCore.QVariant()
         row = self._dataframe.index[index.row()]
         col = self._dataframe.columns[index.column()]
@@ -60,12 +63,27 @@ class PandasModel(QtCore.QAbstractTableModel):
     def flags(self, index):
         return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
-    @QtCore.pyqtSlot()
-    def setData(self, index, any, role=QtCore.Qt.EditRole):
-        print(f"Updating row {index.row()} col {index.column()} to {any}")
-        self._dataframe.iat[index.row(), index.column()] = any
-        return True
+    #TODO
+    def keyPressEvent(self, event):
+        print("event called")
+        if event.key() in self.next_row_keys:
+            self._dataframe.append(pd.Series(), ignore_index=True)
 
+    def setData(self, index, any, role=QtCore.Qt.EditRole):
+        if not index.isValid() or role != QtCore.Qt.EditRole:
+            return False
+        self._dataframe.iat[index.row(), index.column()] = any
+        if index.row()+1 == self.rowCount():
+            print("Trying to insert row")
+            # self.beginInsertRows(QtCore.QModelIndex(), self.rowCount()-1, self.rowCount())
+            self.insertRow(self.rowCount())
+            # self.endInsertRows()
+        self.dataChanged.emit(index,  index)
+        self.layoutChanged.emit()
+        # self._dataframe.reset_index(inplace=True, drop=True)
+        print(self._dataframe)
+        print()
+        return True
 
 
     def roleNames(self):

@@ -1,6 +1,6 @@
 import sys
 import folium  # make pretty maps
-from PyQt5 import QtGui, QtWidgets  # look at pretty maps
+from PyQt5 import QtGui, QtWidgets, QtCore  # look at pretty maps
 from geo import Geo
 import pandas as pd
 import time
@@ -62,6 +62,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.pushButton_set_home.clicked.connect(self.set_home)
         self.pushButton_show_map.clicked.connect(self.display_map)
         self.pushButton_return_to_main.clicked.connect(self._return_to_main)
+        self.pushButton_add_row.clicked.connect(self.add_table_row)
         # self.tableView_data.dataChanged.connect(self._update_dataframe_from_table)  # variable to track last entered cell, so when it's left to save to dataframe
 
 
@@ -90,9 +91,17 @@ class Mapping(friend_map_ui.Ui_MainWindow):
             info['Address'] = self.geo_locator.lat_lon_to_address(lat=info['Lat'], lon=info['Lon'])
         df_info = pd.Series(info)
         self.data = self.data.append(df_info, ignore_index=True)  # data frames don't append in place
-        self.update_table_view(info)
+        self.tableView_data.update()
+        # self.update_table_view(info)
         # for i in info.keys():  # might be this instead
         #     self.data[i].append(info[i])
+        print(self.data)
+
+    def add_table_row(self):
+        print("add table row called")
+        self.data.append(pd.Series(), ignore_index=True)
+        self.tableView_data.model().layoutChanged.emit()
+        # self.tableView_data.update()
 
     def find_and_remove_person(self):
         pass
@@ -195,14 +204,14 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.start_lat = info['Lat']
         self.start_lon = info['Lon']
 
-    def update_table_view(self, info_dict):
-        # called when add person is fininshed
-        row_position = self.tableView_data.rowCount()
-        self.tableView_data.insertRow(row_position)
-        self.tableView_data.setRowCount(self.tableView_data.rowCount())
-        self.tableView_data.setColumnCount(self.tableView_data.columnCount())
-        # for i in
-        # self.tableView_data.insert
+    # def update_table_view(self, info_dict):
+    #     # called when add person is fininshed
+    #     row_position = len(self.data.index)
+    #     self.tableView_data.insertRow(row_position)
+    #     self.tableView_data.setRowCount(len(self.data.index))
+    #     self.tableView_data.setColumnCount(self.tableView_data.columnCount())
+    #     # for i in
+    #     # self.tableView_data.insert
 
     def _update_dataframe_from_table(self):
         # gets called when data is manually entered in tableview. will update dataframe with new data
