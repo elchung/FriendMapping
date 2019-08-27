@@ -91,11 +91,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
             info['Address'] = self.geo_locator.lat_lon_to_address(lat=info['Lat'], lon=info['Lon'])
         df_info = pd.Series(info)
         self.data = self.data.append(df_info, ignore_index=True)  # data frames don't append in place
-        self.tableView_data.update()
-        # self.update_table_view(info)
-        # for i in info.keys():  # might be this instead
-        #     self.setData[i].append(info[i])
-        print(self.data)
+        self._update_table_view(info)
 
     def add_table_row(self):
         print("add table row called")
@@ -107,6 +103,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         pass
         # finds selected person and removes from list
 
+    # https://stackoverflow.com/questions/18172851/deleting-dataframe-row-in-pandas-based-on-column-value
     def remove_person(self, name):
         # scan through points dictionary for person or scan through excel file for person???????
         self.unsaved_changes = True
@@ -204,14 +201,13 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.start_lat = info['Lat']
         self.start_lon = info['Lon']
 
-    # def update_table_view(self, info_dict):
-    #     # called when add person is fininshed
-    #     row_position = len(self.data.index)
-    #     self.tableView_data.insertRow(row_position)
-    #     self.tableView_data.setRowCount(len(self.data.index))
-    #     self.tableView_data.setColumnCount(self.tableView_data.columnCount())
-    #     # for i in
-    #     # self.tableView_data.insert
+    def _update_table_view(self, data):
+        # called when add person is fininshed
+        row_position = self.tableView_data.model().rowCount()
+        self.tableView_data.model().insertRow(row_position, data=data)
+        # self.tableView_data.setRowCount(self.tableView_data.rowCount())
+        # self.tableView_data.setColumnCount(self.tableView_data.columnCount())
+        # for i in
 
     def _update_dataframe_from_table(self):
         # gets called when data is manually entered in tableview. will update dataframe with new data

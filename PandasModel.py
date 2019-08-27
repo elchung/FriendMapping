@@ -1,5 +1,6 @@
 from PyQt5 import QtCore
 import pandas as pd
+# https://stackoverflow.com/questions/43915108/qtablewidget-insert-row-crashes-the-application-python
 
 
 class PandasModel(QtCore.QAbstractTableModel):
@@ -11,7 +12,6 @@ class PandasModel(QtCore.QAbstractTableModel):
         self._dataframe = df.copy(deep=False)
         # self.data_changed = QtCore.pyqtSignal(QtCore.QModelIndex, QtCore.QModelIndex)
         self.next_row_keys = [QtCore.Qt.Key_Down, QtCore.Qt.Key_Return]
-
 
     def setDataFrame(self, dataframe):
         self.beginResetModel()
@@ -61,20 +61,19 @@ class PandasModel(QtCore.QAbstractTableModel):
         return QtCore.QVariant()
 
     def flags(self, index):
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        flags = QtCore.Qt.ItemIsDragEnabled
+        flags |= QtCore.Qt.ItemIsDropEnabled
+        flags |= QtCore.Qt.ItemIsEditable
+        flags |= QtCore.Qt.ItemIsEnabled
+        flags |= QtCore.Qt.ItemIsSelectable
+        return flags
 
     def setData(self, index, any, role=QtCore.Qt.EditRole):
         if not index.isValid() or role != QtCore.Qt.EditRole:
             return False
         self._dataframe.iat[index.row(), index.column()] = any
         if index.row()+1 == self.rowCount():
-            print("Trying to insert row")
-            self.layoutAboutToBeChanged.emit()
-            self.beginInsertRows(index, 1, 1)
-            self._dataframe = self._dataframe.append(pd.Series(), ignore_index=True).copy(deep=False)
-            print(self._dataframe)
-            self.endInsertRows()
-            self.layoutChanged.emit()
+            self.insertRow(self.rowCount(), index, pd.Series())
         self.dataChanged.emit(index,  index)
         self.layoutChanged.emit()
         # self._dataframe.reset_index(inplace=True, drop=True)
@@ -82,6 +81,46 @@ class PandasModel(QtCore.QAbstractTableModel):
         print()
         return True
 
+    def insertRow(self, p_int, parent=QtCore.QModelIndex(), *args, **kwargs):
+        # data to insert should be in args, type pandas Series, dict, or list
+        # https://stackoverflow.com/questions/15888648/is-it-possible-to-insert-a-row-at-an-arbitrary-position-in-a-dataframe-using-pan?rq=1
+        # TODO: enable insertions not just at end of dataframe
+        if p_int > self.rowCount():
+            return False
+
+        self.layoutAboutToBeChanged.emit()
+        self.beginInsertRows(parent, p_int, p_int)
+        if args:
+            self._dataframe = self._dataframe.append(args[0], ignore_index=True)
+        else:
+            self._dataframe = self._dataframe.append(kwargs['data'], ignore_index=True)
+        self.endInsertRows()
+        self.layoutChanged.emit()
+        return True
+
+    def insertRows(self, p_int, p_int_1, parent=None, *args, **kwargs):
+        # Data should be in list format, key worded 'data'
+        # TODO enable row insertions not just at end of dataframe using concat?
+        self.layoutAboutToBeChanged.emit()
+        self.beginInsertRows(parent, p_int, p_int_1)
+        for row in range(p_int_1-p_int+1):
+            self.insertRow(p_int + row, data=kwargs['data'][row])
+        self.endInsertRows()
+        self.layoutChanged.emit()
+
+    def removeRow(self, p_int, parent=None, *args, **kwargs):
+        self.layoutAboutToBeChanged.emit()
+        self.beginRemoveRows(parent, p_int, p_int)
+        self._dataframe = self._dataframe.drop(self._dataframe.index[p_int])
+        self.endRemoveRows()
+        self.layoutChanged.emit()
+
+    def removeRows(self, p_int, p_int_1, parent=QtCore.QModelIndex(), *args, **kwargs):
+        self.layoutAboutToBeChanged.emit()
+        self.beginRemoveRows(parent, p_int, p_int_1)
+        self._dataframe = self._dataframe.drop([p_int, p_int_1])
+        self.endRemoveRows()
+        self.layoutChanged.emit()
 
     def roleNames(self):
         roles = {
