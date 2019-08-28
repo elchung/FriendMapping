@@ -1,4 +1,4 @@
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtGui, QtWidgets
 import pandas as pd
 # https://stackoverflow.com/questions/43915108/qtablewidget-insert-row-crashes-the-application-python
 
@@ -76,9 +76,6 @@ class PandasModel(QtCore.QAbstractTableModel):
             self.insertRow(self.rowCount(), index, pd.Series())
         self.dataChanged.emit(index,  index)
         self.layoutChanged.emit()
-        # self._dataframe.reset_index(inplace=True, drop=True)
-        print(self._dataframe)
-        print()
         return True
 
     def insertRow(self, p_int, parent=QtCore.QModelIndex(), *args, **kwargs):
@@ -129,3 +126,42 @@ class PandasModel(QtCore.QAbstractTableModel):
             PandasModel.ValueRole: b'value'
         }
         return roles
+
+# class cellValidationDelegate(QtGui.QItemDelegate):
+#     def __init__(self, parent=None):
+#         super(cellValidationDelegate, self).__init__(parent)
+#         self.setWindowFlags(QtCore.Qt.Popup)
+#
+#
+#     def createEditor(self, parent, option, index):
+#         return QtGui.QDoubleSpinBox(parent)
+
+class ComboDelegate(QtWidgets.QAbstractItemDelegate):
+    editorItems=['Combo_Zero', 'Combo_One','Combo_Two']
+    height = 25
+    width = 200
+    def createEditor(self, parent, option, index):
+        editor = QtWidgets.QListWidget(parent)
+        # editor.addItems(self.editorItems)
+        # editor.setEditable(True)
+        editor.currentItemChanged.connect(self.currentItemChanged)
+        return editor
+
+    def setEditorData(self,editor,index):
+        z = 0
+        for item in self.editorItems:
+            ai = QtWidgets.QListWidgetItem(item)
+            editor.addItem(ai)
+            if item == index.data():
+                editor.setCurrentItem(editor.item(z))
+            z += 1
+        editor.setGeometry(0,index.row()*self.height,self.width,self.height*len(self.editorItems))
+
+    def setModelData(self, editor, model, index):
+        editorIndex=editor.currentIndex()
+        text=editor.currentItem().text()
+        model.setData(index, text)
+        # print '\t\t\t ...setModelData() 1', text
+
+    def currentItemChanged(self):
+        self.commitData.emit(self.sender())
