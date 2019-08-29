@@ -47,8 +47,8 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.tableView_data.setModel(pandas_table_model)
         self.lat_delegate = cellValidationDelegate(max=90, min=-90)
         self.lon_delegate = cellValidationDelegate(max=180, min=-180)
-        self.tableView_data.setItemDelegateForColumn(1, self.lat_delegate)
-        self.tableView_data.setItemDelegateForColumn(2, self.lon_delegate)
+        self.tableView_data.setItemDelegateForColumn(self.tableView_data.model().dataFrame.columns.tolist().index('Lat'), self.lat_delegate)
+        self.tableView_data.setItemDelegateForColumn(self.tableView_data.model().dataFrame.columns.tolist().index('Lon'), self.lon_delegate)
         self.setup_connections()
 
     def setup_connections(self):
@@ -63,6 +63,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.pushButton_show_map.clicked.connect(self.display_map)
         self.pushButton_return_to_main.clicked.connect(self._return_to_main)
         self.pushButton_add_row.clicked.connect(self.add_table_row)
+        self.tableView_data.model().dataChanged.connect(self.check_location)
         # self.tableView_data.dataChanged.connect(self._update_dataframe_from_table)  # variable to track last entered cell, so when it's left to save to dataframe
 
 
@@ -220,6 +221,12 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         #if column worked with was lat/lon or address, to update the previous cells and update the dataframe accordingly
         pass
 
+    def check_location(self):
+        '''check index
+        check if lat lon changed or city
+        updated other'''
+        print("Cell changed!")
+        pass
 
     def _return_to_main(self):
         self.stackedWidget_main.setCurrentIndex(0)

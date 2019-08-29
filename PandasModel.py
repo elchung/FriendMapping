@@ -74,8 +74,8 @@ class PandasModel(QtCore.QAbstractTableModel):
         self._dataframe.iat[index.row(), index.column()] = any
         if index.row()+1 == self.rowCount():
             self.insertRow(self.rowCount(), index, pd.Series())
-        self.dataChanged.emit(index,  index)
-        self.layoutChanged.emit()
+        self.dataChanged.emit(index,  index, [QtCore.Qt.EditRole])
+        # self.layoutChanged.emit()
         return True
 
     def insertRow(self, p_int, parent=QtCore.QModelIndex(), *args, **kwargs):
