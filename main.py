@@ -6,7 +6,7 @@ import pandas as pd
 import time
 import friend_map_ui
 import popup_widgets
-from PandasModel import PandasModel, ComboDelegate
+from PandasModel import PandasModel, cellValidationDelegate
 # https://blog.dominodatalab.com/creating-interactive-crime-maps-with-folium/
 #look into qcompleter for city autocomplete
 #look into importing from contacts list on phone, then saving to phone
@@ -45,11 +45,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
 
         pandas_table_model = PandasModel(self.data)
         self.tableView_data.setModel(pandas_table_model)
-        # self.tableView_data.setItemDelegateForColumn(1, ComboDelegate)
-        # self.tableView_data.setColumnCount(len(self.data.keys()))
-        # self.data_model = PandasModel(self.data)
-        # self.tableView_data.setModel(self.data_model)
-        # self.column_order = self.person_sample.keys()
+        self.tableView_data.setItemDelegateForColumn(1, cellValidationDelegate())
         self.setup_connections()
 
     def setup_connections(self):
