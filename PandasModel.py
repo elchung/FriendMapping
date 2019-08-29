@@ -128,12 +128,34 @@ class PandasModel(QtCore.QAbstractTableModel):
         return roles
 
 class cellValidationDelegate(QtWidgets.QStyledItemDelegate):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, max=180, min=-180):
         super(cellValidationDelegate, self).__init__(parent)
+        self.max = max
+        self.min = min
         # self.setWindowFlags(QtCore.Qt.Popup)
 
     def createEditor(self, parent, option, index):
-        editor = QtWidgets.QDoubleSpinBox(parent)
-        editor.setMinimum(-99999.99)
-        editor.setMaximum(999999.99)
+        editor = QtWidgets.QLineEdit(parent)
+        self.onlyDouble = QtGui.QDoubleValidator(self.min, self.max, 10)
+        editor.setValidator(self.onlyDouble)
         return editor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

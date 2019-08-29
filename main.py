@@ -45,7 +45,10 @@ class Mapping(friend_map_ui.Ui_MainWindow):
 
         pandas_table_model = PandasModel(self.data)
         self.tableView_data.setModel(pandas_table_model)
-        self.tableView_data.setItemDelegateForColumn(1, cellValidationDelegate())
+        self.lat_delegate = cellValidationDelegate(max=90, min=-90)
+        self.lon_delegate = cellValidationDelegate(max=180, min=-180)
+        self.tableView_data.setItemDelegateForColumn(1, self.lat_delegate)
+        self.tableView_data.setItemDelegateForColumn(2, self.lon_delegate)
         self.setup_connections()
 
     def setup_connections(self):
