@@ -22,6 +22,10 @@ class Geo:
             print("Get info failed. Please check the address or internet connection.")
             return None
 
+    # def get_city_autocomplete(self, name):
+    #     list taken from https://simplemaps.com/data/world-cities.
+
+
     @staticmethod
     def get_distance(start, end):
         # start and end should be tuple of (lat, lon)

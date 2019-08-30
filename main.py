@@ -23,6 +23,11 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         # input: tuple of starting coordinates
         self.app = QtWidgets.QApplication(sys.argv)
 
+        # dataframe header names for better referencing
+        self.addr_name = 'Address'
+        self.lat_name = 'Lat'
+        self.lon_name = 'Lon'
+
         self.start_lat = home_coord[0]
         self.start_lon = home_coord[1]
         self.geo_locator = Geo()
@@ -31,12 +36,13 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.save_location = None
         self.map_save_path = None
         self.unsaved_changes = False
+        self.editing_cells = False
         self.data = pd.DataFrame({  # will only be used for passthrough to model
-            'Name': ['a'],  # type(str)
-            'Lat': ['a'],  # type(float)
-            'Lon': ['a'],  # type(float)
-            'Address': ['0'],  # type(str)
-            'Tags': ['0'],  # type(list)
+            'Name': ['Eric Chung'],  # type(str)
+            self.lat_name: ['0.0'],  # type(float)
+            self.lon_name: ['0.0'],  # type(float)
+            self.addr_name: ['a'],  # type(str)
+            'Tags': ['a'],  # type(list)
             'Last visited': ['0'],  # type(float)
             'Dates visited': ['0'],  # type(list)
             'Date added': ['0'],  # type(float)
@@ -47,8 +53,8 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.tableView_data.setModel(pandas_table_model)
         self.lat_delegate = cellValidationDelegate(max=90, min=-90)
         self.lon_delegate = cellValidationDelegate(max=180, min=-180)
-        self.tableView_data.setItemDelegateForColumn(self.tableView_data.model().dataFrame.columns.tolist().index('Lat'), self.lat_delegate)
-        self.tableView_data.setItemDelegateForColumn(self.tableView_data.model().dataFrame.columns.tolist().index('Lon'), self.lon_delegate)
+        self.tableView_data.setItemDelegateForColumn(self._get_lat_col_index(), self.lat_delegate)
+        self.tableView_data.setItemDelegateForColumn(self._get_lon_col_index(), self.lon_delegate)
         self.setup_connections()
 
     def setup_connections(self):
@@ -178,7 +184,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         if not lon and not lat and not city:
             return False
         if (not lon or not lat) and city:
-            lon, lat = Geo.address_to_lat_lon(city)
+            lon, lat = self.geo_locator.address_to_lat_lon(city)
 
         # ordered = heap()
         # for i in self.friends:
@@ -221,15 +227,46 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         #if column worked with was lat/lon or address, to update the previous cells and update the dataframe accordingly
         pass
 
-    def check_location(self):
+    def check_location(self, index=None):
         '''check index
         check if lat lon changed or city
         updated other'''
-        print("Cell changed!")
-        pass
+        if self.editing_cells:  # to prevent
+            return False
+        self.editing_cells = True
+
+        if index.column() in (self._get_lat_col_index(), self._get_lon_col_index()):
+            # update address
+            lat_data = self.get_cell_data(index.row(), self._get_lat_col_index())
+            lon_data = self.get_cell_data(index.row(), self._get_lon_col_index())
+            address = self.geo_locator.lat_lon_to_address(lat_data, lon_data)
+            self.set_cell_data(index.row(), self._get_addr_col_index(), address)
+        elif index.column() == self._get_addr_col_index():
+            lat, lon = self.geo_locator.address_to_lat_lon(self.get_cell_data(index.row(), self._get_addr_col_index()))
+            self.set_cell_data(index.row(), self._get_lat_col_index(), lat)
+            self.set_cell_data(index.row(), self._get_lon_col_index(), lon)
+        self.editing_cells = False
+        return True
+
+    def set_cell_data(self, row, column, data):
+        self.tableView_data.model().dataFrame.iloc[row][column] = data
+        return True
+
+    def get_cell_data(self, row, column):
+        return self.tableView_data.model().dataFrame.iloc[row][column]
+
+    def _get_lat_col_index(self):
+        return self.tableView_data.model().dataFrame.columns.tolist().index(self.lat_name)
+
+    def _get_lon_col_index(self):
+        return self.tableView_data.model().dataFrame.columns.tolist().index(self.lon_name)
+
+    def _get_addr_col_index(self):
+        return self.tableView_data.model().dataFrame.columns.tolist().index(self.addr_name)
 
     def _return_to_main(self):
         self.stackedWidget_main.setCurrentIndex(0)
+        return True
 
     @staticmethod
     def query_import_data_question(question):
