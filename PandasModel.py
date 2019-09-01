@@ -105,10 +105,11 @@ class PandasModel(QtCore.QAbstractTableModel):
         self.endInsertRows()
         self.layoutChanged.emit()
 
-    def removeRow(self, p_int, parent=None, *args, **kwargs):
+    def removeRow(self, p_int, parent=QtCore.QModelIndex(), *args, **kwargs):
         self.layoutAboutToBeChanged.emit()
         self.beginRemoveRows(parent, p_int, p_int)
-        self._dataframe = self._dataframe.drop(self._dataframe.index[p_int])
+        self._dataframe.drop(self._dataframe.index[p_int], inplace=True)
+        self._dataframe.reset_index(inplace=True, drop=True)
         self.endRemoveRows()
         self.layoutChanged.emit()
 

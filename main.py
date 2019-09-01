@@ -7,17 +7,13 @@ import time
 import friend_map_ui
 import popup_widgets
 from PandasModel import PandasModel, cellValidationDelegate
+from datetime import datetime
 # https://blog.dominodatalab.com/creating-interactive-crime-maps-with-folium/
 #look into qcompleter for city autocomplete
 #look into importing from contacts list on phone, then saving to phone
 
-
-class VCFParser:
-    def __init__(self):
-        pass
-
 class Mapping(friend_map_ui.Ui_MainWindow):
-    def __init__(self, window, home_coord=(0, 0), zoom=12):
+    def __init__(self, window, zoom=12):
         super().__init__()
         self.setupUi(window)
         # input: tuple of starting coordinates
@@ -28,10 +24,10 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.lat_name = 'Lat'
         self.lon_name = 'Lon'
 
-        self.start_lat = home_coord[0]
-        self.start_lon = home_coord[1]
+        self.start_lat = 38.6268039
+        self.start_lon = -90.1994097
         self.geo_locator = Geo()
-        self.m = folium.Map(location=home_coord, zoom_start=zoom)
+        self.m = folium.Map(location=(self.start_lat, self.start_lon), zoom_start=zoom)
         self.default_map_save = r'C:\Users\Eric\Documents\Python Scripts\FriendMap'
         self.save_location = None
         self.map_save_path = None
@@ -39,25 +35,37 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.editing_cells = False
         self.data = pd.DataFrame({  # will only be used for passthrough to model
             'Name': ['Eric Chung'],  # type(str)
-            self.lat_name: ['0.0'],  # type(float)
-            self.lon_name: ['0.0'],  # type(float)
-            self.addr_name: ['a'],  # type(str)
-            'Tags': ['a'],  # type(list)
-            'Last visited': ['0'],  # type(float)
-            'Dates visited': ['0'],  # type(list)
-            'Date added': ['0'],  # type(float)
+            self.lat_name: str(self.start_lat),  # type(float)
+            self.lon_name: str(self.start_lon),  # type(float)
+            self.addr_name: ['Saint Louis, MO'],  # type(str)
+            'Tags': ['Me, Myself, I'],  # type(list)
+            'Last visited': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],  # type(float)
+            'Dates visited': ['All the time'],  # type(list)
+            'Date added': [datetime.fromtimestamp(777186000).strftime('%Y-%m-%d %H:%M:%S')],  # type(float)
             'Description': ['0']  # type(str)
             })
 
+        self._setup_column_delegates()
+        self._setup_connections()
+        self._setup_column_width_rules()
+
+    def _setup_column_delegates(self):
         pandas_table_model = PandasModel(self.data)
         self.tableView_data.setModel(pandas_table_model)
         self.lat_delegate = cellValidationDelegate(max=90, min=-90)
         self.lon_delegate = cellValidationDelegate(max=180, min=-180)
         self.tableView_data.setItemDelegateForColumn(self._get_lat_col_index(), self.lat_delegate)
         self.tableView_data.setItemDelegateForColumn(self._get_lon_col_index(), self.lon_delegate)
-        self.setup_connections()
 
-    def setup_connections(self):
+    def _setup_column_width_rules(self):
+        header = self.tableView_data.horizontalHeader()
+        for column in range(len(self.data.keys()) - 1):
+            header.setSectionResizeMode(column, QtWidgets.QHeaderView.Interactive)
+        header.setStretchLastSection(True)
+        self.resizeColumnsToContents()
+        # set all columns to resize to fit contents except for last column (Description column)
+
+    def _setup_connections(self):
         self.pushButton_add_person.clicked.connect(self.add_person)
         self.pushButton_remove_person.clicked.connect(self.find_and_remove_person)
         self.pushButton_import.clicked.connect(self.import_from_excel)
@@ -106,7 +114,8 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         # self.tableView_data.update()
 
     def find_and_remove_person(self):
-        pass
+        print(self.tableView_data.currentIndex().row())
+        self.tableView_data.model().removeRow(self.tableView_data.currentIndex().row())
         # finds selected person and removes from list
 
     # https://stackoverflow.com/questions/18172851/deleting-dataframe-row-in-pandas-based-on-column-value
@@ -120,18 +129,37 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         drop_index = self.data['Name'].index(name)
         self.data.drop([drop_index])
 
+    # TODO
     def save_map(self, new_save=False):
         if new_save or not self.map_save_path:
             self.map_save_path = self.get_save_as()
         self.m.save(self.map_save_path)
 
     # pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.to_dict.html#pandas.DataFrame.to_dict
+    #TODO
     def display_map(self):
+        self.render_map()
         self.stackedWidget_main.setCurrentIndex(1)
+
+    # TODO check dis shit out
+    def render_map(self):
+        ##
         for p_dict in self.data.to_dict('records'):
             text = self.make_html_popup_text(p_dict)
             folium.Marker([p_dict['Lat'], p_dict['Lon']], popup=text, tooltip=p_dict['Name']).add_to(self.m)
+        ##
 
+        self.map = folium.Map(location=[self.start_lat, self.start_lon], tiles="Mapbox Bright", zoom_start=2)
+        # I can add marker one by one on the map
+        for i in range(len(self.data)):
+            lon = i['Address']
+            folium.Marker([self.data.iloc[i]['Lon'], self.data.iloc[i]['Lat']],
+                          popup=self.data.iloc[i]['Name']).add_to(self.map)
+        self.map.save(self.default_map_save)
+        self.WebKit_map.load(self.default_map_save)
+
+
+    # TODO
     def make_html_popup_text(self, info):
         # input: info = dictionary of all data to display
         # out: html string
@@ -143,9 +171,12 @@ class Mapping(friend_map_ui.Ui_MainWindow):
 
     def export_to_excel(self, new_save=False):
         if new_save or not self.save_location:
-            self.save_location = self.get_save_as("Excel File (*.xlsx, *.xls)")
-        self.data.to_excel(self.save_location)
+            self.save_location = self.get_save_as("Excel File (*.xlsx)")
+            if not self.save_location:
+                return
+        self.tableView_data.model().dataFrame.to_excel(self.save_location, index=None, header=True)
         self.unsaved_changes = False
+        self.print_output("Saved!")
 
     def import_from_excel(self):
         self.unsaved_changes = True
@@ -191,16 +222,6 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         #     if dist <= distance:
         #         ordered.add(dist, friend)
 
-    #TODO check dis shit out
-    def render_map(self):
-        self.map = folium.Map(location=[self.start_lat, self.start_lon], tiles="Mapbox Bright", zoom_start=2)
-        # I can add marker one by one on the map
-        for i in range(len(self.data)):
-            lon = i['Address']
-            folium.Marker([self.data.iloc[i]['Lon'], self.data.iloc[i]['Lat']], popup=self.data.iloc[i]['Name']).add_to(self.map)
-        self.map.save(self.default_map_save)
-        self.WebKit_map.load(self.default_map_save)
-
     def set_home(self):
         ex = popup_widgets.Ui_SetHomeWidget()
         info = ex.exec_()
@@ -208,24 +229,12 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.start_lon = info['Lon']
 
     def resizeColumnsToContents(self):
-        self.tableView_data.resizeColumnsToContents()()
+        self.tableView_data.resizeColumnsToContents()
 
     def _update_table_view(self, data):
-        # called when add person is fininshed
+        # called when add person is finished
         row_position = self.tableView_data.model().rowCount()
         self.tableView_data.model().insertRow(row_position, data=data)
-        # self.tableView_data.setRowCount(self.tableView_data.rowCount())
-        # self.tableView_data.setColumnCount(self.tableView_data.columnCount())
-        # for i in
-
-    def _update_dataframe_from_table(self):
-        # gets called when data is manually entered in tableview. will update dataframe with new data
-        pass
-
-    def update_dataframe_from_table(self, prev_row, prev_col, new_row, new_col):
-        # update dataframe with new data
-        #if column worked with was lat/lon or address, to update the previous cells and update the dataframe accordingly
-        pass
 
     def check_location(self, index=None):
         '''check index
@@ -251,6 +260,15 @@ class Mapping(friend_map_ui.Ui_MainWindow):
     def set_cell_data(self, row, column, data):
         self.tableView_data.model().dataFrame.iloc[row][column] = data
         return True
+
+    def print_output(self, text):
+        self.textEdit_output.moveCursor(QtGui.QTextCursor.End)  # make sure cursor is at end before pasting new text
+        text = f"<b>[{datetime.now().strftime('%H:%M:%S.%f')[:-3]}]:</b> {str(text)}"
+        self.textEdit_output.insertHtml(text)
+        self.textEdit_output.append("")
+        self.textEdit_output.scrollToAnchor(text)
+        self.textEdit_output.moveCursor(QtGui.QTextCursor.End)
+        QtWidgets.QApplication.processEvents()
 
     def get_cell_data(self, row, column):
         return self.tableView_data.model().dataFrame.iloc[row][column]
