@@ -2,6 +2,7 @@ import sys
 import folium  # make pretty maps
 from PyQt5 import QtGui, QtWidgets, QtCore  # look at pretty maps
 from geo import Geo
+from os import path
 import pandas as pd
 import time
 import friend_map_ui
@@ -28,7 +29,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.start_lon = -90.1994097
         self.geo_locator = Geo()
         self.m = folium.Map(location=(self.start_lat, self.start_lon), zoom_start=zoom)
-        self.default_map_save = r'C:\Users\Eric\Documents\Python Scripts\FriendMap'
+        self.default_map_save = path.dirname(path.abspath(__file__)) + r"\default_map.html"
         self.save_location = None
         self.map_save_path = None
         self.unsaved_changes = False
@@ -143,20 +144,15 @@ class Mapping(friend_map_ui.Ui_MainWindow):
 
     # TODO check dis shit out
     def render_map(self):
-        ##
-        for p_dict in self.data.to_dict('records'):
-            text = self.make_html_popup_text(p_dict)
-            folium.Marker([p_dict['Lat'], p_dict['Lon']], popup=text, tooltip=p_dict['Name']).add_to(self.m)
-        ##
+        ##if not self.map....
+        ##if no map, make new one. If map, check what markers have been added and only add new ones
 
         self.map = folium.Map(location=[self.start_lat, self.start_lon], tiles="Mapbox Bright", zoom_start=2)
-        # I can add marker one by one on the map
-        for i in range(len(self.data)):
-            lon = i['Address']
-            folium.Marker([self.data.iloc[i]['Lon'], self.data.iloc[i]['Lat']],
-                          popup=self.data.iloc[i]['Name']).add_to(self.map)
+        for p_dict in self.tableView_data.model().dataFrame.to_dict('records'):
+            text = self.make_html_popup_text(p_dict)
+            folium.Marker([float(p_dict['Lat']), float(p_dict['Lon'])], popup=text, tooltip=p_dict['Name']).add_to(self.m)
         self.map.save(self.default_map_save)
-        self.WebKit_map.load(self.default_map_save)
+        self.webKit_map.load(QtCore.QUrl(self.default_map_save))
 
 
     # TODO

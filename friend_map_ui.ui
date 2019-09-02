@@ -37,25 +37,6 @@
       </property>
       <widget class="QWidget" name="page_main">
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="1" rowspan="12">
-         <widget class="QTableView" name="tableView_data">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="editTriggers">
-           <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::CurrentChanged|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
-          </property>
-          <property name="alternatingRowColors">
-           <bool>true</bool>
-          </property>
-          <property name="sortingEnabled">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
         <item row="7" column="0">
          <widget class="QPushButton" name="pushButton_save_map">
           <property name="text">
@@ -70,34 +51,6 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
-         <widget class="QPushButton" name="pushButton_save_data_as">
-          <property name="text">
-           <string>Export to Excel As...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QPushButton" name="pushButton_import">
-          <property name="text">
-           <string>Import From Excel</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QPushButton" name="pushButton_remove_person">
-          <property name="text">
-           <string>Remove Selected Person</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QPushButton" name="pushButton_add_person">
-          <property name="text">
-           <string>Add Person</string>
-          </property>
-         </widget>
-        </item>
         <item row="6" column="0">
          <widget class="QPushButton" name="pushButton_show_map">
           <property name="text">
@@ -105,17 +58,10 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="0">
-         <widget class="QPushButton" name="pushButton_save_data">
+        <item row="5" column="0">
+         <widget class="QPushButton" name="pushButton_save_data_as">
           <property name="text">
-           <string>Export to Excel</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="pushButton_add_row">
-          <property name="text">
-           <string>Add Row</string>
+           <string>Export to Excel As...</string>
           </property>
          </widget>
         </item>
@@ -134,6 +80,63 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="pushButton_add_person">
+          <property name="text">
+           <string>Add Person</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QPushButton" name="pushButton_save_data">
+          <property name="text">
+           <string>Export to Excel</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="pushButton_add_row">
+          <property name="text">
+           <string>Add Row</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QPushButton" name="pushButton_remove_person">
+          <property name="text">
+           <string>Remove Selected Person</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="pushButton_import">
+          <property name="text">
+           <string>Import From Excel</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" rowspan="12">
+         <widget class="QTableView" name="tableView_data">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="editTriggers">
+           <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::CurrentChanged|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
+          </property>
+          <property name="alternatingRowColors">
+           <bool>true</bool>
+          </property>
+          <property name="sortingEnabled">
+           <bool>true</bool>
+          </property>
+          <attribute name="horizontalHeaderMinimumSectionSize">
+           <number>75</number>
+          </attribute>
          </widget>
         </item>
        </layout>
@@ -176,7 +179,7 @@
      <x>0</x>
      <y>0</y>
      <width>1600</width>
-     <height>17</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
