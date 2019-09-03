@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class Ui_MainWindow(object):
@@ -81,12 +81,14 @@ class Ui_MainWindow(object):
         self.page_map.setObjectName("page_map")
         self.gridLayout_3 = QtWidgets.QGridLayout(self.page_map)
         self.gridLayout_3.setObjectName("gridLayout_3")
-        self.webKit_map = QtWebEngineWidgets.QWebEngineView(self.page_map)
-        self.webKit_map.setObjectName("webKit_map")
-        self.gridLayout_3.addWidget(self.webKit_map, 0, 1, 2, 1)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.gridLayout_3.addItem(spacerItem, 1, 0, 1, 1)
         self.pushButton_return_to_main = QtWidgets.QPushButton(self.page_map)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton_return_to_main.sizePolicy().hasHeightForWidth())
+        self.pushButton_return_to_main.setSizePolicy(sizePolicy)
         self.pushButton_return_to_main.setObjectName("pushButton_return_to_main")
         self.gridLayout_3.addWidget(self.pushButton_return_to_main, 0, 0, 1, 1)
         self.stackedWidget_main.addWidget(self.page_map)
@@ -107,7 +109,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuFile.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.stackedWidget_main.setCurrentIndex(0)
+        self.stackedWidget_main.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):

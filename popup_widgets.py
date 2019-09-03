@@ -39,16 +39,25 @@ class Ui_SetHomeWidget(QtWidgets.QDialog):
         self.double_only = QtGui.QDoubleValidator()
         self.lat_input.setValidator(self.double_only)
         self.lon_input.setValidator(self.double_only)
-
+        self.buttons = QtWidgets.QDialogButtonBox()
+        self.buttons.addButton("Submit", QtWidgets.QDialogButtonBox.AcceptRole)
+        self.buttons.addButton("Cancel", QtWidgets.QDialogButtonBox.RejectRole)
         grid.addWidget(self.buttons)
         self.setLayout(grid)
-        self.setGeometry(300, 300, 300, 300)
+        # self.setGeometry(300, 300, 300, 300)
         self.setWindowTitle("Enter Information")
         self.buttons.accepted.connect(self.submit_close)
         self.buttons.rejected.connect(self.reject)
+
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+
+
         self.show()
 
     def address_event(self):
+        if not self.address_input.text():
+            return
         lat, lon = self.geo_locator.address_to_lat_lon(self.address_input.text())
         if lat:
             self.lat_input.setText(lat)  # prevents none return from wiping text
@@ -56,6 +65,8 @@ class Ui_SetHomeWidget(QtWidgets.QDialog):
             self.lon_input.setText(lon)
 
     def lat_lon_event(self):
+        if not self.lat_input.text() or not self.lon_input.text():
+            return
         address = self.geo_locator.lat_lon_to_address(float(self.lat_input.text()), float(self.lon_input.text()))
         if address:
             self.address_input.setText(address)

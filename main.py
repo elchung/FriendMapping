@@ -1,6 +1,6 @@
 import sys
 import folium  # make pretty maps
-from PyQt5 import QtGui, QtWidgets, QtCore  # look at pretty maps
+from PyQt5 import QtGui, QtWidgets, QtCore, QtWebEngineWidgets  # look at pretty maps
 from geo import Geo
 from os import path
 import pandas as pd
@@ -28,12 +28,13 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.start_lat = 38.6268039
         self.start_lon = -90.1994097
         self.geo_locator = Geo()
-        self.m = folium.Map(location=(self.start_lat, self.start_lon), zoom_start=zoom)
+        self.map = folium.Map(location=(self.start_lat, self.start_lon), zoom_start=zoom)
         self.default_map_save = path.dirname(path.abspath(__file__)) + r"\default_map.html"
         self.save_location = None
         self.map_save_path = None
         self.unsaved_changes = False
         self.editing_cells = False
+        self.last_edited_data = None
         self.data = pd.DataFrame({  # will only be used for passthrough to model
             'Name': ['Eric Chung'],  # type(str)
             self.lat_name: str(self.start_lat),  # type(float)
@@ -45,10 +46,23 @@ class Mapping(friend_map_ui.Ui_MainWindow):
             'Date added': [datetime.fromtimestamp(777186000).strftime('%Y-%m-%d %H:%M:%S')],  # type(float)
             'Description': ['0']  # type(str)
             })
-
+        self._setup_map()
         self._setup_column_delegates()
         self._setup_connections()
         self._setup_column_width_rules()
+        self.stackedWidget_main.setCurrentIndex(0)
+
+    def _setup_map(self):
+        # added since qt creator doesn't have webengineview built in
+        self.webKit_map = QtWebEngineWidgets.QWebEngineView(self.page_map)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.webKit_map.sizePolicy().hasHeightForWidth())
+        self.webKit_map.setSizePolicy(sizePolicy)
+        self.webKit_map.setObjectName("webKit_map")
+        self.gridLayout_3.addWidget(self.webKit_map, 0, 1, 2, 1)
+
 
     def _setup_column_delegates(self):
         pandas_table_model = PandasModel(self.data)
@@ -134,7 +148,9 @@ class Mapping(friend_map_ui.Ui_MainWindow):
     def save_map(self, new_save=False):
         if new_save or not self.map_save_path:
             self.map_save_path = self.get_save_as()
-        self.m.save(self.map_save_path)
+            if not self.map_save_path:
+                return
+        self.map.save(self.map_save_path)
 
     # pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.to_dict.html#pandas.DataFrame.to_dict
     #TODO
@@ -147,12 +163,12 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         ##if not self.map....
         ##if no map, make new one. If map, check what markers have been added and only add new ones
 
-        self.map = folium.Map(location=[self.start_lat, self.start_lon], tiles="Mapbox Bright", zoom_start=2)
+        self.map = folium.Map(location=[self.start_lat, self.start_lon], tiles="OpenStreetMap", zoom_start=12)
         for p_dict in self.tableView_data.model().dataFrame.to_dict('records'):
             text = self.make_html_popup_text(p_dict)
-            folium.Marker([float(p_dict['Lat']), float(p_dict['Lon'])], popup=text, tooltip=p_dict['Name']).add_to(self.m)
+            folium.Marker([float(p_dict['Lat']), float(p_dict['Lon'])], popup=text, tooltip=p_dict['Name']).add_to(self.map)
         self.map.save(self.default_map_save)
-        self.webKit_map.load(QtCore.QUrl(self.default_map_save))
+        self.webKit_map.load(QtCore.QUrl.fromLocalFile(self.default_map_save))
 
 
     # TODO
@@ -221,6 +237,8 @@ class Mapping(friend_map_ui.Ui_MainWindow):
     def set_home(self):
         ex = popup_widgets.Ui_SetHomeWidget()
         info = ex.exec_()
+        if not info:
+            return
         self.start_lat = info['Lat']
         self.start_lon = info['Lon']
 
@@ -236,17 +254,18 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         '''check index
         check if lat lon changed or city
         updated other'''
-        if self.editing_cells:  # to prevent
+        if self.editing_cells or not index or self.get_cell_data(index.row(), index.column()) == 'nan':
             return False
         self.editing_cells = True
 
         if index.column() in (self._get_lat_col_index(), self._get_lon_col_index()):
-            # update address
             lat_data = self.get_cell_data(index.row(), self._get_lat_col_index())
             lon_data = self.get_cell_data(index.row(), self._get_lon_col_index())
             address = self.geo_locator.lat_lon_to_address(lat_data, lon_data)
             self.set_cell_data(index.row(), self._get_addr_col_index(), address)
         elif index.column() == self._get_addr_col_index():
+            print(self.get_cell_data(index.row(), self._get_addr_col_index()))
+            print(type(self.get_cell_data(index.row(), self._get_addr_col_index())))
             lat, lon = self.geo_locator.address_to_lat_lon(self.get_cell_data(index.row(), self._get_addr_col_index()))
             self.set_cell_data(index.row(), self._get_lat_col_index(), lat)
             self.set_cell_data(index.row(), self._get_lon_col_index(), lon)
@@ -281,6 +300,9 @@ class Mapping(friend_map_ui.Ui_MainWindow):
     def _return_to_main(self):
         self.stackedWidget_main.setCurrentIndex(0)
         return True
+
+    def _no_cell_edited(self, index):
+        return self.tableView_data.model().last_edited == self.get_cell_data(index.row(), index.column())
 
     @staticmethod
     def query_import_data_question(question):

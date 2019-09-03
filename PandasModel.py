@@ -12,6 +12,7 @@ class PandasModel(QtCore.QAbstractTableModel):
         self._dataframe = df.copy(deep=False)
         # self.data_changed = QtCore.pyqtSignal(QtCore.QModelIndex, QtCore.QModelIndex)
         self.next_row_keys = [QtCore.Qt.Key_Down, QtCore.Qt.Key_Return]
+        self.last_edited = None
 
     def setDataFrame(self, dataframe):
         self.beginResetModel()
@@ -52,6 +53,9 @@ class PandasModel(QtCore.QAbstractTableModel):
         dt = self._dataframe[col].dtype
 
         val = self._dataframe.iloc[row][col]
+        if role == QtCore.Qt.EditRole:
+            self.last_edited = str(val)
+            return str(val)
         if role == QtCore.Qt.DisplayRole:
             return str(val)
         elif role == PandasModel.ValueRole:
