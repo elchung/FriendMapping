@@ -30,7 +30,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.start_lon = -90.1994097
         self.geo_locator = Geo()
         self.map = folium.Map(location=(self.start_lat, self.start_lon), zoom_start=zoom)
-        self.default_map_save = path.dirname(path.abspath(__file__)) + r"\default_map.html"
+        self.default_map_save = path.dirname(path.abspath(__file__)) + r"\map.html"
         self.address_pickle_location = path.dirname(path.abspath(__file__)) + r"\cities_dictionary.pkl"
         self.city_lookup_dict = None
         self.save_location = None
