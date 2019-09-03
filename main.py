@@ -4,14 +4,15 @@ from PyQt5 import QtGui, QtWidgets, QtCore, QtWebEngineWidgets  # look at pretty
 from geo import Geo
 from os import path
 import pandas as pd
-import time
+import pickle
 import friend_map_ui
 import popup_widgets
 from PandasModel import PandasModel, cellValidationDelegate
 from datetime import datetime
 # https://blog.dominodatalab.com/creating-interactive-crime-maps-with-folium/
-#look into qcompleter for city autocomplete
-#look into importing from contacts list on phone, then saving to phone
+# look into qcompleter for city autocomplete
+# look into importing from contacts list on phone, then saving to phone
+
 
 class Mapping(friend_map_ui.Ui_MainWindow):
     def __init__(self, window, zoom=12):
@@ -30,6 +31,8 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.geo_locator = Geo()
         self.map = folium.Map(location=(self.start_lat, self.start_lon), zoom_start=zoom)
         self.default_map_save = path.dirname(path.abspath(__file__)) + r"\default_map.html"
+        self.address_pickle_location = path.dirname(path.abspath(__file__)) + r"\cities_dictionary.pkl"
+        self.city_lookup_dict = None
         self.save_location = None
         self.map_save_path = None
         self.unsaved_changes = False
@@ -37,10 +40,10 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.last_edited_data = None
         self.data = pd.DataFrame({  # will only be used for passthrough to model
             'Name': ['Eric Chung'],  # type(str)
-            self.lat_name: str(self.start_lat),  # type(float)
-            self.lon_name: str(self.start_lon),  # type(float)
             self.addr_name: ['Saint Louis, MO'],  # type(str)
             'Tags': ['Me, Myself, I'],  # type(list)
+            self.lat_name: str(self.start_lat),  # type(float)
+            self.lon_name: str(self.start_lon),  # type(float)
             'Last visited': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],  # type(float)
             'Dates visited': ['All the time'],  # type(list)
             'Date added': [datetime.fromtimestamp(777186000).strftime('%Y-%m-%d %H:%M:%S')],  # type(float)
@@ -50,51 +53,8 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self._setup_column_delegates()
         self._setup_connections()
         self._setup_column_width_rules()
+        self._load_address_dict_from_pickle()
         self.stackedWidget_main.setCurrentIndex(0)
-
-    def _setup_map(self):
-        # added since qt creator doesn't have webengineview built in
-        self.webKit_map = QtWebEngineWidgets.QWebEngineView(self.page_map)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.webKit_map.sizePolicy().hasHeightForWidth())
-        self.webKit_map.setSizePolicy(sizePolicy)
-        self.webKit_map.setObjectName("webKit_map")
-        self.gridLayout_3.addWidget(self.webKit_map, 0, 1, 2, 1)
-
-
-    def _setup_column_delegates(self):
-        pandas_table_model = PandasModel(self.data)
-        self.tableView_data.setModel(pandas_table_model)
-        self.lat_delegate = cellValidationDelegate(max=90, min=-90)
-        self.lon_delegate = cellValidationDelegate(max=180, min=-180)
-        self.tableView_data.setItemDelegateForColumn(self._get_lat_col_index(), self.lat_delegate)
-        self.tableView_data.setItemDelegateForColumn(self._get_lon_col_index(), self.lon_delegate)
-
-    def _setup_column_width_rules(self):
-        header = self.tableView_data.horizontalHeader()
-        for column in range(len(self.data.keys()) - 1):
-            header.setSectionResizeMode(column, QtWidgets.QHeaderView.Interactive)
-        header.setStretchLastSection(True)
-        self.resizeColumnsToContents()
-        # set all columns to resize to fit contents except for last column (Description column)
-
-    def _setup_connections(self):
-        self.pushButton_add_person.clicked.connect(self.add_person)
-        self.pushButton_remove_person.clicked.connect(self.find_and_remove_person)
-        self.pushButton_import.clicked.connect(self.import_from_excel)
-        self.pushButton_save_data.clicked.connect(lambda: self.export_to_excel(False))
-        self.pushButton_save_data_as.clicked.connect(lambda: self.export_to_excel(True))
-        self.pushButton_save_map.clicked.connect(lambda: self.save_map(False))
-        self.pushButton_save_map_as.clicked.connect(lambda: self.save_map(True))
-        self.pushButton_set_home.clicked.connect(self.set_home)
-        self.pushButton_show_map.clicked.connect(self.display_map)
-        self.pushButton_return_to_main.clicked.connect(self._return_to_main)
-        self.pushButton_add_row.clicked.connect(self.add_table_row)
-        self.tableView_data.model().dataChanged.connect(self.check_location)
-        # self.tableView_data.dataChanged.connect(self._update_dataframe_from_table)  # variable to track last entered cell, so when it's left to save to dataframe
-
 
     def add_person(self):
         # look into vincent and altair for displaying people data whene marker is clicked
@@ -109,19 +69,20 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         if not info:
             return
         elif info['Name'] in self.data['Name']:
-            print(f"{info['name']} already exists. No new entry will be added")
+            self.print_output(f"{info['name']} already exists. No new entry will be added")
             return
         elif not info['Name']:
-            print("No name found. Entering a name is required to add entry.")
+            self.print_output("No name found. Entering a name is required to add entry.")
             return
 
-        if info['Address'] and ('Lat' not in info.keys() or 'Lon' not in info.keys()):
-            info['Lat'], info['Lon'] = self.geo_locator.address_to_lat_lon(info['Address'])
+        if info[self.addr_name] and ('Lat' not in info.keys() or 'Lon' not in info.keys()):
+            info[self.lat_name], info[self.lon_name] = self._get_coordinates_from_address(info[self.addr_name])
         elif 'Address' not in info.keys() and info['Lat'] and info['Lon']:
-            info['Address'] = self.geo_locator.lat_lon_to_address(lat=info['Lat'], lon=info['Lon'])
+            info[self.addr_name] = self._get_address_from_coordinates(lat=info[self.lat_name], lon=info[self.lon_name])
         df_info = pd.Series(info)
         self.data = self.data.append(df_info, ignore_index=True)  # data frames don't append in place
         self._update_table_view(info)
+        self.print_output(f"{info['Name']} added!")
 
     def add_table_row(self):
         self._update_table_view(pd.Series())
@@ -152,16 +113,13 @@ class Mapping(friend_map_ui.Ui_MainWindow):
                 return
         self.map.save(self.map_save_path)
 
-    # pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.to_dict.html#pandas.DataFrame.to_dict
-    #TODO
     def display_map(self):
         self.render_map()
         self.stackedWidget_main.setCurrentIndex(1)
 
-    # TODO check dis shit out
     def render_map(self):
-        ##if not self.map....
-        ##if no map, make new one. If map, check what markers have been added and only add new ones
+        # # if not self.map....
+        # # if no map, make new one. If map, check what markers have been added and only add new ones
 
         self.map = folium.Map(location=[self.start_lat, self.start_lon], tiles="OpenStreetMap", zoom_start=12)
         for p_dict in self.tableView_data.model().dataFrame.to_dict('records'):
@@ -170,15 +128,13 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.map.save(self.default_map_save)
         self.webKit_map.load(QtCore.QUrl.fromLocalFile(self.default_map_save))
 
-
-    # TODO
     def make_html_popup_text(self, info):
         # input: info = dictionary of all data to display
         # out: html string
-        popup_text = f"<b></b>{info['Name']}\n"
+        popup_text = f"<b></b>{info['Name']}\n\n"
         for key in info.keys():
             if key != 'Name':
-                popup_text += f"<b>{key}:</b> {info[key]}\n"
+                popup_text += f"<b>{key}:</b> {info[key]}\n\n"
         return popup_text
 
     def export_to_excel(self, new_save=False):
@@ -190,6 +146,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.unsaved_changes = False
         self.print_output("Saved!")
 
+    #Todo
     def import_from_excel(self):
         self.unsaved_changes = True
         if self.data['Name'] and self.unsaved_changes:  # TODO: Add flag for unsaved
@@ -245,28 +202,22 @@ class Mapping(friend_map_ui.Ui_MainWindow):
     def resizeColumnsToContents(self):
         self.tableView_data.resizeColumnsToContents()
 
-    def _update_table_view(self, data):
-        # called when add person is finished
-        row_position = self.tableView_data.model().rowCount()
-        self.tableView_data.model().insertRow(row_position, data=data)
-
     def check_location(self, index=None):
         '''check index
         check if lat lon changed or city
         updated other'''
-        if self.editing_cells or not index or self.get_cell_data(index.row(), index.column()) == 'nan':
+        if self.editing_cells or not index or self._get_cell_data(index.row(), index.column()) == 'nan':
             return False
         self.editing_cells = True
 
         if index.column() in (self._get_lat_col_index(), self._get_lon_col_index()):
-            lat_data = self.get_cell_data(index.row(), self._get_lat_col_index())
-            lon_data = self.get_cell_data(index.row(), self._get_lon_col_index())
-            address = self.geo_locator.lat_lon_to_address(lat_data, lon_data)
+            lat_data = self._get_cell_data(index.row(), self._get_lat_col_index())
+            lon_data = self._get_cell_data(index.row(), self._get_lon_col_index())
+            address = self._get_address_from_coordinates(lat_data, lon_data)
             self.set_cell_data(index.row(), self._get_addr_col_index(), address)
         elif index.column() == self._get_addr_col_index():
-            print(self.get_cell_data(index.row(), self._get_addr_col_index()))
-            print(type(self.get_cell_data(index.row(), self._get_addr_col_index())))
-            lat, lon = self.geo_locator.address_to_lat_lon(self.get_cell_data(index.row(), self._get_addr_col_index()))
+            print(self._get_cell_data(index.row(), self._get_addr_col_index()))
+            lat, lon = self._get_coordinates_from_address(self._get_cell_data(index.row(), self._get_addr_col_index()))
             self.set_cell_data(index.row(), self._get_lat_col_index(), lat)
             self.set_cell_data(index.row(), self._get_lon_col_index(), lon)
         self.editing_cells = False
@@ -285,8 +236,59 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.textEdit_output.moveCursor(QtGui.QTextCursor.End)
         QtWidgets.QApplication.processEvents()
 
-    def get_cell_data(self, row, column):
+    def _get_address_from_coordinates(self, lat, lon):
+        return self.geo.locator.lat_lon_to_address(lat, lon)
+
+    def _get_coordinates_from_address(self, address):
+        return self.geo_locator.address_to_lat_lon(address)
+
+    def _get_cell_data(self, row, column):
         return self.tableView_data.model().dataFrame.iloc[row][column]
+
+    def _setup_map(self):
+        # added since qt creator doesn't have webengineview built in
+        self.webKit_map = QtWebEngineWidgets.QWebEngineView(self.page_map)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.webKit_map.sizePolicy().hasHeightForWidth())
+        self.webKit_map.setSizePolicy(sizePolicy)
+        self.webKit_map.setObjectName("webKit_map")
+        self.gridLayout_3.addWidget(self.webKit_map, 0, 1, 2, 1)
+
+
+    def _setup_column_delegates(self):
+        pandas_table_model = PandasModel(self.data)
+        self.tableView_data.setModel(pandas_table_model)
+        self.lat_delegate = cellValidationDelegate(max=90, min=-90)
+        self.lon_delegate = cellValidationDelegate(max=180, min=-180)
+        self.tableView_data.setItemDelegateForColumn(self._get_lat_col_index(), self.lat_delegate)
+        self.tableView_data.setItemDelegateForColumn(self._get_lon_col_index(), self.lon_delegate)
+
+    def _setup_column_width_rules(self):
+        header = self.tableView_data.horizontalHeader()
+        for column in range(len(self.data.keys()) - 1):
+            header.setSectionResizeMode(column, QtWidgets.QHeaderView.Interactive)
+        header.setStretchLastSection(True)
+        self.resizeColumnsToContents()
+
+    def _setup_connections(self):
+        self.pushButton_add_person.clicked.connect(self.add_person)
+        self.pushButton_remove_person.clicked.connect(self.find_and_remove_person)
+        self.pushButton_import.clicked.connect(self.import_from_excel)
+        self.pushButton_save_data.clicked.connect(lambda: self.export_to_excel(False))
+        self.pushButton_save_data_as.clicked.connect(lambda: self.export_to_excel(True))
+        self.pushButton_save_map.clicked.connect(lambda: self.save_map(False))
+        self.pushButton_save_map_as.clicked.connect(lambda: self.save_map(True))
+        self.pushButton_set_home.clicked.connect(self.set_home)
+        self.pushButton_show_map.clicked.connect(self.display_map)
+        self.pushButton_return_to_main.clicked.connect(self._return_to_main)
+        self.pushButton_add_row.clicked.connect(self.add_table_row)
+        self.tableView_data.model().dataChanged.connect(self.check_location)
+
+    def _load_address_dict_from_pickle(self):
+        with open(self.address_pickle_location, 'rb') as f:
+            self.city_lookup_dict = pickle.load(f)
 
     def _get_lat_col_index(self):
         return self.tableView_data.model().dataFrame.columns.tolist().index(self.lat_name)
@@ -301,8 +303,13 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.stackedWidget_main.setCurrentIndex(0)
         return True
 
+    def _update_table_view(self, data):
+        # called when add person is finished
+        row_position = self.tableView_data.model().rowCount()
+        self.tableView_data.model().insertRow(row_position, data=data)
+
     def _no_cell_edited(self, index):
-        return self.tableView_data.model().last_edited == self.get_cell_data(index.row(), index.column())
+        return self.tableView_data.model().last_edited == self._get_cell_data(index.row(), index.column())
 
     @staticmethod
     def query_import_data_question(question):
@@ -325,6 +332,8 @@ if __name__ == "__main__":
     ui = Mapping(window)
     window.show()
     sys.exit(app.exec_())
+
+
 
 
 '''
