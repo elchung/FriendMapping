@@ -37,48 +37,31 @@
       </property>
       <widget class="QWidget" name="page_main">
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="7" column="0">
+        <item row="1" column="0">
+         <widget class="QPushButton" name="pushButton_add_row">
+          <property name="text">
+           <string>Add Row</string>
+          </property>
+         </widget>
+        </item>
+        <item row="16" column="0">
          <widget class="QPushButton" name="pushButton_save_map">
           <property name="text">
            <string>Save Map</string>
           </property>
          </widget>
         </item>
-        <item row="8" column="0">
+        <item row="14" column="0">
+         <widget class="Line" name="line_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="17" column="0">
          <widget class="QPushButton" name="pushButton_save_map_as">
           <property name="text">
            <string>Save Map As..</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0">
-         <widget class="QPushButton" name="pushButton_show_map">
-          <property name="text">
-           <string>Show Map</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QPushButton" name="pushButton_save_data_as">
-          <property name="text">
-           <string>Export to Excel As...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="0">
-         <widget class="QPushButton" name="pushButton_set_home">
-          <property name="text">
-           <string>Set Home</string>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="0">
-         <widget class="QTextEdit" name="textEdit_output">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
           </property>
          </widget>
         </item>
@@ -90,34 +73,48 @@
          </widget>
         </item>
         <item row="4" column="0">
-         <widget class="QPushButton" name="pushButton_save_data">
-          <property name="text">
-           <string>Export to Excel</string>
+         <widget class="Line" name="line">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="pushButton_add_row">
-          <property name="text">
-           <string>Add Row</string>
+        <item row="10" column="0">
+         <widget class="Line" name="line_4">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QPushButton" name="pushButton_remove_person">
-          <property name="text">
-           <string>Remove Selected Person</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
+        <item row="11" column="0">
          <widget class="QPushButton" name="pushButton_import">
           <property name="text">
            <string>Import From Excel</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="1" rowspan="12">
+        <item row="12" column="0">
+         <widget class="QPushButton" name="pushButton_save_data">
+          <property name="text">
+           <string>Export to Excel</string>
+          </property>
+         </widget>
+        </item>
+        <item row="18" column="0">
+         <widget class="Line" name="line_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="pushButton_remove_person">
+          <property name="text">
+           <string>Remove Selected Person</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" rowspan="22">
          <widget class="QTableView" name="tableView_data">
           <property name="sizePolicy">
            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
@@ -137,6 +134,44 @@
           <attribute name="horizontalHeaderMinimumSectionSize">
            <number>75</number>
           </attribute>
+         </widget>
+        </item>
+        <item row="13" column="0">
+         <widget class="QPushButton" name="pushButton_save_data_as">
+          <property name="text">
+           <string>Export to Excel As...</string>
+          </property>
+         </widget>
+        </item>
+        <item row="20" column="0">
+         <widget class="QTextEdit" name="textEdit_output">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+        <item row="15" column="0">
+         <widget class="QPushButton" name="pushButton_show_map">
+          <property name="text">
+           <string>Show Map</string>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <widget class="QPushButton" name="pushButton_set_home">
+          <property name="text">
+           <string>Set Home</string>
+          </property>
+         </widget>
+        </item>
+        <item row="7" column="0">
+         <widget class="QPushButton" name="pushButton_find_nearby">
+          <property name="text">
+           <string>Find Nearby</string>
+          </property>
          </widget>
         </item>
        </layout>

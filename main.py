@@ -9,6 +9,7 @@ import friend_map_ui
 import popup_widgets
 from PandasModel import PandasModel, cellValidationDelegate
 from datetime import datetime
+import heapq
 # https://blog.dominodatalab.com/creating-interactive-crime-maps-with-folium/
 # look into qcompleter for city autocomplete
 # look into importing from contacts list on phone, then saving to phone
@@ -191,6 +192,32 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         #     if dist <= distance:
         #         ordered.add(dist, friend)
 
+    def find_nearby(self):
+        ex = popup_widgets.Ui_FindNearbyWidget()
+        info = ex.exec_()
+        if not info or not info['lat'] or info['lon']:
+            return
+        if self.tableView_data.model().rowCount() > info['num people']:
+            self.print_output("Selected number of people is greater than number of people in data...")
+
+        nearby_heap = []
+        start_coord = (info['lat'], info['lon'])
+        for row in range(self.tableView_data.model().rowCount()):
+            person = self.tableView_data.model().dataFrame.iloc[row]
+            end_coord = (person[self._get_lat_col_index()], person[self._get_lon_col_index()])
+            distance = self.geo_locator.get_distance(start_coord, end_coord).kilometers
+            pair = (distance, person[0])
+            if len(nearby_heap) < info['num people']:
+                heapq.heappush(nearby_heap, pair)
+            else:  # assuming max heap size now
+                heapq.heappushpop(nearby_heap, pair)
+        #n nearby people calculated...
+        for i in nearby_heap:
+            text = f"{i[1]} is {i[0]}km away."
+            self.print_output(text)
+
+
+
     def set_home(self):
         ex = popup_widgets.Ui_SetHomeWidget()
         info = ex.exec_()
@@ -285,6 +312,7 @@ class Mapping(friend_map_ui.Ui_MainWindow):
         self.pushButton_return_to_main.clicked.connect(self._return_to_main)
         self.pushButton_add_row.clicked.connect(self.add_table_row)
         self.tableView_data.model().dataChanged.connect(self.check_location)
+        self.pushButton_find_nearby.clicked.connect(self.find_nearby)
 
     def _load_address_dict_from_pickle(self):
         with open(self.address_pickle_location, 'rb') as f:
